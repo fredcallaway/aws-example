@@ -9,12 +9,14 @@ aws ec2 run-instances \
     --security-group-ids fred-cluster-group \
     --tag-specifications "ResourceType=instance,Tags=[{Key=cluster,Value=test_cluster}]"
 
-aws ec2 describe-instances --filter "Name=tag:cluster,Values=test_cluster" --query "Reservations[*].Instances[*].[PublicIpAddress]" --output=text > ips.txt
-aws ec2 describe-instances --filters "Name=tag:cluster,Values=test_cluster" --query 'Reservations[*].Instances[*].[InstanceId]' --output text > instances.txt
+aws ec2 describe-instances --filter "Name=tag:cluster,Values=test_cluster" --query "Reservations[*].Instances[*].[PrivateIpAddress]" --output=text > ips.txt
+aws ec2 describe-instances --filter "Name=tag:cluster,Values=test_cluster" --query 'Reservations[*].Instances[*].[InstanceId]' --output text > instances.txt
+
+sleep 10  # HACK: wait until instances are probably ready
 
 while read p; do
     scp -o "StrictHostKeyChecking=no" ~/julia-1.1.1-linux-x86_64.tar.gz ${p}:~/
     # scp setup.sh ec2-user@${p}:~/setup.sh
     ssh ec2-user@${p} "bash -s" < ./install_julia.sh &
-done < instances.txt
+done < ips.txt
 
